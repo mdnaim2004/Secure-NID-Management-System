@@ -96,6 +96,134 @@ Tracks important activities such as:
 Generates QR codes containing citizen verification data.
 
 ---
+---
+
+# Data Flow Diagram (DFD)
+
+## Level 0 DFD
+
+```
+                    ┌────────────────────────────────┐
+                    │                                │
+                    │         ADMIN USER             │
+                    │        (mdnaim/etc.)           │
+                    │                                │
+                    └───────┬────────────────▲───────┘
+                            │                │
+              Login Info    │                │  Login Result
+              Citizen Data  │                │  Citizen Info
+              NID Request   │                │  QR Code
+              CRUD Command  │                │  Audit Logs
+                            │                │  Error/Success
+                            ▼                │
+                ┌───────────────────────────────────┐
+                │                                   │
+                │            P0                     │
+                │   NATIONAL ID MANAGEMENT          │
+                │          SYSTEM                   │
+                │                                   │
+                └───┬──────────┬──────────┬─────────┘
+                    │          │          │
+          Read/Write│  Read/   │   Write  │
+          Citizen   │  Verify  │   Log    │
+                    ▼          ▼          ▼
+            ┌───────────┐ ┌─────────┐ ┌────────────┐
+            │    D1     │ │   D2    │ │    D3      │
+            │ CITIZENS  │ │  USERS  │ │ AUDIT_LOGS │
+            │    DB     │ │   DB    │ │    DB      │
+            └───────────┘ └─────────┘ └────────────┘
+
+                            │
+                            │ QR Code Output
+                            ▼
+                ┌───────────────────────────────┐
+                │   MOBILE / VERIFIER           │
+                │   (QR Scanner)                │
+                └───────────────────────────────┘
+```
+
+---
+
+## Level 1 DFD
+
+```text
+┌─────────────────┐                                       ┌──────────────────┐
+│   ADMIN USER    │                                       │ MOBILE/VERIFIER  │
+└────────┬────────┘                                       └────────▲─────────┘
+         │                                                         │
+         │ username,                                            QR Code
+         │ password                                              Image
+         ▼                                                         │
+┌─────────────────────┐    query user       ┌──────────────────┐   │
+│        P1           │────────────────────▶│       D2         │   │
+│  USER               │◀────────────────────│     USERS DB     │   │
+│  AUTHENTICATION     │  hash, salt         └──────────────────┘   │
+└────────┬────────────┘                                            │
+         │ login success/fail                                      │
+         ▼                                                         │
+┌─────────────────────────────────────────────────────────────┐    │
+│              ADMIN DASHBOARD (Session)                     │     │ 
+└──┬──────────┬──────────┬──────────┬──────────┬─────────────┘     │
+   │          │          │          │          │                   │
+   │ Register │ Update   │ Delete   │ Search   │ QR Request        │
+   │ Data     │ Data     │ NID      │ NID      │ (NID)             │
+   ▼          ▼          ▼          ▼          ▼                   │
+┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────────────┐     │
+│   P2   │ │   P2   │ │   P3   │ │   P4   │ │      P5        │─────┘
+│REGISTER│ │ UPDATE │ │ DELETE │ │ SEARCH │ │ QR GENERATION  │
+│CITIZEN │ │CITIZEN │ │CITIZEN │ │CITIZEN │ │ & VERIFICATION │
+└───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘ └───────┬────────┘
+    │INSERT    │UPDATE    │DELETE    │SELECT        │SELECT
+    ▼          ▼          ▼          ▼              ▼
+┌────────────────────────────────────────────────────────────┐
+│                           D1                               │
+│                     CITIZENS DB                            │
+│ (nid, name, dob, gender, address, father_name,             │
+│  mother_name, blood_group, is_active,                      │
+│  created_at, last_modified)                                │
+└────────────────────────────────────────────────────────────┘
+         ▲            ▲           ▲          ▲        ▲
+         │            │           │          │        │
+         │ citizen    │ updated   │ success  │ citizen│ citizen
+         │ saved      │ record    │ deleted  │ record │ record
+         │            │           │          │        │
+         ▼            ▼           ▼          ▼        ▼
+┌────────────────────────────────────────────────────────────┐
+│                           ADMIN                            │
+│      (Success/Error Messages, Citizen Details)             │
+└────────────────────────────────────────────────────────────┘
+
+   Each CRUD/QR process also sends log info ──────┐
+                                                  ▼
+                                       ┌──────────────────┐
+                                       │       P6         │
+                                       │ AUDIT LOGGING    │
+                                       │ (log_activity)   │
+                                       └────────┬─────────┘
+                                                │ INSERT
+                                                ▼
+                                       ┌──────────────────┐
+                                       │       D3         │
+                                       │  AUDIT_LOGS DB   │
+                                       │ (id, nid,        │
+                                       │  timestamp,      │
+                                       │  activity_type)  │
+                                       └──────────────────┘
+                                                │
+                                                │ View Logs
+                                                ▼
+                                       ┌──────────────────┐
+                                       │       P7         │
+                                       │  VIEW AUDIT      │
+                                       │     LOGS         │
+                                       └────────┬─────────┘
+                                                │
+                                                ▼
+                                             ADMIN
+```
+
+---
+---
 
 ## Database Tables
 

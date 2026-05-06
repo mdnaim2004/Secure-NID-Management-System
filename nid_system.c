@@ -7,6 +7,7 @@
 #include <openssl/rand.h>
 #include <openssl/evp.h>
 #include <gtk/gtk.h>
+#include <qrencode.h>
 
 #define MAX_NAME 100
 #define MAX_ADDRESS 200
@@ -353,6 +354,8 @@ static void on_search_clicked(GtkWidget *widget, gpointer data);
 static void on_update_clicked(GtkWidget *widget, gpointer data);
 static void on_delete_clicked(GtkWidget *widget, gpointer data);
 static void on_audit_clicked(GtkWidget *widget, gpointer data);
+static void on_nid_guide_clicked(GtkWidget *widget, gpointer data);
+static void on_qr_verify_clicked(GtkWidget *widget, gpointer data);
 
 GtkWidget* create_dashboard_window() {
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -387,6 +390,8 @@ GtkWidget* create_dashboard_window() {
     GtkWidget *btn_update = gtk_button_new_with_label("Update Citizen");
     GtkWidget *btn_delete = gtk_button_new_with_label("Delete Citizen");
     GtkWidget *btn_audit = gtk_button_new_with_label("View Audit Logs");
+    GtkWidget *btn_nid_guide = gtk_button_new_with_label("NID Application Guide");
+    GtkWidget *btn_qr_verify = gtk_button_new_with_label("QR Verification");
     GtkWidget *btn_logout = gtk_button_new_with_label("Logout");
 
     gtk_widget_set_size_request(btn_register, 150, 60);
@@ -395,6 +400,8 @@ GtkWidget* create_dashboard_window() {
     gtk_widget_set_size_request(btn_update, 150, 60);
     gtk_widget_set_size_request(btn_delete, 150, 60);
     gtk_widget_set_size_request(btn_audit, 150, 60);
+    gtk_widget_set_size_request(btn_nid_guide, 150, 60);
+    gtk_widget_set_size_request(btn_qr_verify, 150, 60);
     gtk_widget_set_size_request(btn_logout, 150, 60);
 
     gtk_grid_attach(GTK_GRID(grid), btn_register, 0, 0, 1, 1);
@@ -403,6 +410,19 @@ GtkWidget* create_dashboard_window() {
     gtk_grid_attach(GTK_GRID(grid), btn_update, 1, 1, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), btn_delete, 0, 2, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), btn_audit, 1, 2, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), btn_register, 0, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), btn_view, 1, 0, 1, 1);
+
+    gtk_grid_attach(GTK_GRID(grid), btn_search, 0, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), btn_update, 1, 1, 1, 1);
+
+    gtk_grid_attach(GTK_GRID(grid), btn_delete, 0, 2, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), btn_audit, 1, 2, 1, 1);
+
+    gtk_grid_attach(GTK_GRID(grid), btn_nid_guide, 0, 3, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), btn_qr_verify, 1, 3, 1, 1);
+
+    gtk_grid_attach(GTK_GRID(grid), btn_logout, 0, 4, 2, 1);
     gtk_grid_attach(GTK_GRID(grid), btn_logout, 0, 3, 2, 1);
 
     g_signal_connect(btn_register, "clicked", G_CALLBACK(on_register_clicked), window);
@@ -411,6 +431,8 @@ GtkWidget* create_dashboard_window() {
     g_signal_connect(btn_update, "clicked", G_CALLBACK(on_update_clicked), window);
     g_signal_connect(btn_delete, "clicked", G_CALLBACK(on_delete_clicked), window);
     g_signal_connect(btn_audit, "clicked", G_CALLBACK(on_audit_clicked), window);
+    g_signal_connect(btn_nid_guide, "clicked", G_CALLBACK(on_nid_guide_clicked), window);
+    g_signal_connect(btn_qr_verify, "clicked", G_CALLBACK(on_qr_verify_clicked), window);
     g_signal_connect(btn_logout, "clicked", G_CALLBACK(on_logout_clicked), NULL);
 
     return window;
@@ -653,7 +675,7 @@ static void on_update_save(GtkWidget *widget, gpointer data);
 
 typedef struct {
     GtkWidget *dialog;
-    GtkWidget *entries[8];
+    GtkWidget *entries[10];
     char original_nid[20];
     int found;
 } UpdateWidgets;
@@ -945,7 +967,7 @@ int main(int argc, char *argv[]) {
         SystemUser admin; 
         strcpy(admin.username, "mdnaim");
         generate_salt(admin.salt);  
-        derive_key("mdnaim2004$", admin.salt, admin.password_hash);
+        derive_key("mdnaim2004@", admin.salt, admin.password_hash);
         admin.role = ADMIN;
         admin.failed_attempts = 0;
         admin.last_login = 0;

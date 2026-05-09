@@ -940,7 +940,212 @@ static void on_audit_clicked(GtkWidget *widget, gpointer data) {
     gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
 }
+//   NID APPLICATION GUIDE
+static void on_nid_guide_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *dialog = gtk_dialog_new_with_buttons("নতুন NID আবেদন নির্দেশিকা",
+                                                    GTK_WINDOW(data),
+                                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                    "Close", GTK_RESPONSE_CLOSE,
+                                                    NULL);
 
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 600, 500);
+
+    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_container_set_border_width(GTK_CONTAINER(content), 15);
+
+    GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+    gtk_box_pack_start(GTK_BOX(content), scroll, TRUE, TRUE, 0);
+
+    GtkWidget *label = gtk_label_new(NULL);
+    gtk_label_set_xalign(GTK_LABEL(label), 0.0);
+    gtk_label_set_yalign(GTK_LABEL(label), 0.0);
+    gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+
+    const char *guide_text =
+        "নতুন জাতীয় পরিচয়পত্র (NID) আবেদন করার জন্য প্রয়োজনীয় তথ্য ও ডকুমেন্টঃ\n\n"
+
+        "১। আবেদনকারীর পূর্ণ নাম\n"
+        "২। জন্ম তারিখ\n"
+        "৩। পিতা ও মাতার নাম\n"
+        "৪। বর্তমান ঠিকানা\n"
+        "৫। স্থায়ী ঠিকানা\n"
+        "৬। জন্ম নিবন্ধন সনদ নম্বর\n"
+        "৭। মোবাইল নম্বর\n"
+        "৮। রক্তের গ্রুপ (যদি জানা থাকে)\n"
+        "৯। শিক্ষাগত তথ্য (যদি থাকে)\n"
+        "১০। নাগরিকত্ব সংক্রান্ত তথ্য\n\n"
+
+        "প্রয়োজনীয় ডকুমেন্টঃ\n\n"
+        "• জন্ম নিবন্ধন সনদ\n"
+        "• পিতা/মাতার NID কপি\n"
+        "• শিক্ষাগত সনদ (যদি থাকে)\n"
+        "• ঠিকানার প্রমাণপত্র\n"
+        "• পাসপোর্ট সাইজের ছবি\n\n"
+
+        "বায়োমেট্রিক তথ্যঃ\n\n"
+        "• আবেদনকারীর ছবি\n"
+        "• আঙুলের ছাপ\n"
+        "• স্বাক্ষর\n\n"
+
+        "যোগ্যতাঃ\n\n"
+        "• আবেদনকারীর বয়স ১৮ বছর বা তার বেশি হতে হবে।\n"
+        "• সঠিক ও বৈধ তথ্য প্রদান করতে হবে।\n"
+        "• ভুল বা ভুয়া তথ্য দিলে আবেদন বাতিল হতে পারে।\n\n"
+
+        "নোটঃ\n"
+        "NID আবেদন করার আগে সকল তথ্য ও ডকুমেন্ট সঠিকভাবে প্রস্তুত রাখা উচিত।";
+
+    gtk_label_set_text(GTK_LABEL(label), guide_text);
+
+    gtk_container_add(GTK_CONTAINER(scroll), label);
+
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+}
+
+
+//   QR VERIFICATION SYSTEM
+static void on_qr_generate_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget **widgets = (GtkWidget **)data;
+    GtkWidget *entry = widgets[0];
+    GtkWidget *dialog = widgets[1];
+
+    const char *nid = gtk_entry_get_text(GTK_ENTRY(entry));
+
+    if(strlen(nid) == 0) {
+        show_message(dialog, "Error", "Please enter an NID!", GTK_MESSAGE_ERROR);
+        return;
+    }
+
+    char *sql = "SELECT nid, name, dob, gender, blood_group, is_active FROM citizens WHERE nid = ?;";
+    sqlite3_stmt *stmt;
+
+    if(sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK) {
+        show_message(dialog, "Error", "Database error!", GTK_MESSAGE_ERROR);
+        return;
+    }
+
+    sqlite3_bind_text(stmt, 1, nid, -1, SQLITE_STATIC);
+
+    if(sqlite3_step(stmt) == SQLITE_ROW) {
+        const char *db_nid = (const char*)sqlite3_column_text(stmt, 0);
+        const char *name = (const char*)sqlite3_column_text(stmt, 1);
+        const char *dob = (const char*)sqlite3_column_text(stmt, 2);
+        const char *gender = (const char*)sqlite3_column_text(stmt, 3);
+        const char *blood = (const char*)sqlite3_column_text(stmt, 4);
+        int active = sqlite3_column_int(stmt, 5);
+
+        char qr_text[512];
+
+        snprintf(qr_text, sizeof(qr_text),
+                 "National ID Verification\n"
+                 "NID: %s\n"
+                 "Name: %s\n"
+                 "DOB: %s\n"
+                 "Gender: %s\n"
+                 "Blood Group: %s\n"
+                 "Status: %s\n"
+                 "Verified By: NID Management System",
+                 db_nid, name, dob, gender, blood,
+                 active ? "Active" : "Inactive");
+
+        QRcode *qr = QRcode_encodeString(qr_text, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
+
+        if(qr == NULL) {
+            show_message(dialog, "Error", "Failed to generate QR code!", GTK_MESSAGE_ERROR);
+            sqlite3_finalize(stmt);
+            return;
+        }
+
+        int scale = 8;
+        int size = qr->width * scale;
+
+        GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, size, size);
+        int rowstride = gdk_pixbuf_get_rowstride(pixbuf);
+        guchar *pixels = gdk_pixbuf_get_pixels(pixbuf);
+
+        for(int y = 0; y < size; y++) {
+            for(int x = 0; x < size; x++) {
+                int qr_x = x / scale;
+                int qr_y = y / scale;
+                int qr_index = qr_y * qr->width + qr_x;
+
+                int color = (qr->data[qr_index] & 1) ? 0 : 255;
+
+                guchar *p = pixels + y * rowstride + x * 3;
+                p[0] = color;
+                p[1] = color;
+                p[2] = color;
+            }
+        }
+
+        GtkWidget *qr_dialog = gtk_dialog_new_with_buttons("QR Verification Code",
+                                                           GTK_WINDOW(dialog),
+                                                           GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                           "Close", GTK_RESPONSE_CLOSE,
+                                                           NULL);
+
+        GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(qr_dialog));
+        gtk_container_set_border_width(GTK_CONTAINER(content), 15);
+
+        GtkWidget *info = gtk_label_new("মোবাইল দিয়ে QR code scan করলে citizen verification information দেখা যাবে।");
+        gtk_box_pack_start(GTK_BOX(content), info, FALSE, FALSE, 10);
+
+        GtkWidget *image = gtk_image_new_from_pixbuf(pixbuf);
+        gtk_box_pack_start(GTK_BOX(content), image, TRUE, TRUE, 10);
+
+        gtk_widget_show_all(qr_dialog);
+        gtk_dialog_run(GTK_DIALOG(qr_dialog));
+        gtk_widget_destroy(qr_dialog);
+
+        g_object_unref(pixbuf);
+        QRcode_free(qr);
+
+        log_activity(db_nid, "QR GENERATED");
+
+    } else {
+        show_message(dialog, "Not Found", "Citizen with this NID not found!", GTK_MESSAGE_WARNING);
+    }
+
+    sqlite3_finalize(stmt);
+}
+
+
+static void on_qr_verify_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *dialog = gtk_dialog_new_with_buttons("QR Verification",
+                                                    GTK_WINDOW(data),
+                                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                    "Close", GTK_RESPONSE_CLOSE,
+                                                    NULL);
+
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 180);
+
+    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_container_set_border_width(GTK_CONTAINER(content), 15);
+
+    GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_box_pack_start(GTK_BOX(content), hbox, TRUE, TRUE, 0);
+
+    GtkWidget *label = gtk_label_new("Enter NID:");
+    gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+
+    GtkWidget *entry = gtk_entry_new();
+    gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 0);
+
+    GtkWidget *qr_btn = gtk_button_new_with_label("Generate QR");
+    gtk_box_pack_start(GTK_BOX(hbox), qr_btn, FALSE, FALSE, 0);
+
+    static GtkWidget *widgets[2];
+    widgets[0] = entry;
+    widgets[1] = dialog;
+
+    g_signal_connect(qr_btn, "clicked", G_CALLBACK(on_qr_generate_clicked), widgets);
+
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+}
 //   MAIN  
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
@@ -992,5 +1197,4 @@ int main(int argc, char *argv[]) {
     
     sqlite3_close(db);
     EVP_cleanup();
-    return 0;
-}
+    return 0

@@ -114,6 +114,9 @@ void generate_unique_nid(char *nid) {
 }
 
 //   CRYPTO FUNCTIONS  
+void encrypt_text(const char *plain, char *encrypted_hex);
+void decrypt_text(const char *encrypted_hex, char *plain);
+
 void generate_salt(unsigned char *salt) {
     if (!RAND_bytes(salt, SALT_LEN)) {
         perror("Error generating salt");

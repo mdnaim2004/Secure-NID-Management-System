@@ -583,7 +583,6 @@ GtkWidget* create_dashboard_window() {
     gtk_grid_attach(GTK_GRID(grid), btn_qr_verify, 1, 3, 1, 1);
 
     gtk_grid_attach(GTK_GRID(grid), btn_logout, 0, 4, 2, 1);
-    gtk_grid_attach(GTK_GRID(grid), btn_logout, 0, 3, 2, 1);
 
     g_signal_connect(btn_register, "clicked", G_CALLBACK(on_register_clicked), window);
     g_signal_connect(btn_view, "clicked", G_CALLBACK(on_view_clicked), window);

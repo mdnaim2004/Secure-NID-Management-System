@@ -237,6 +237,81 @@ void log_activity(const char *nid, const char *activity) {
     }
 }
 
+void apply_css() {
+    GtkCssProvider *provider = gtk_css_provider_new();
+
+    const char *css =
+        /* Main window */
+        "window {"
+        "  background: linear-gradient(135deg, #006a4e, #009b77, #f42a41);"
+        "}"
+
+        /* Labels */
+        "label {"
+        "  color: white;"
+        "  font-size: 14px;"
+        "  font-weight: bold;"
+        "}"
+
+        /* Title labels */
+        "label.title {"
+        "  font-size: 24px;"
+        "  color: #ffffff;"
+        "}"
+
+        /* Frames / cards */
+        "frame {"
+        "  background: rgba(255,255,255,0.12);"
+        "  border-radius: 18px;"
+        "  border: 2px solid rgba(255,255,255,0.20);"
+        "  padding: 15px;"
+        "}"
+
+        /* Entry boxes */
+        "entry {"
+        "  background: rgba(255,255,255,0.95);"
+        "  color: #111111;"
+        "  border-radius: 10px;"
+        "  padding: 10px;"
+        "  border: 2px solid #dddddd;"
+        "}"
+
+        "entry:focus {"
+        "  border: 2px solid #f42a41;"
+        "}"
+
+        /* Buttons */
+        "button {"
+        "  background: linear-gradient(to right, #006a4e, #009b77);"
+        "  color: white;"
+        "  border-radius: 12px;"
+        "  border: none;"
+        "  padding: 12px;"
+        "  font-size: 14px;"
+        "  font-weight: bold;"
+        "}"
+
+        /* Hover effect */
+        "button:hover {"
+        "  background: linear-gradient(to right, #f42a41, #ff5e6c);"
+        "}"
+
+        /* Press effect */
+        "button:active {"
+        "  background: #c91d32;"
+        "}";
+
+    gtk_css_provider_load_from_data(provider, css, -1, NULL);
+
+    gtk_style_context_add_provider_for_screen(
+        gdk_screen_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_USER
+    );
+
+    g_object_unref(provider);
+}
+
 // GTK UTILITY FUNCTIONS
 void show_message(GtkWidget *parent, const char *title, const char *message, GtkMessageType type) {
     GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(parent),
@@ -279,9 +354,12 @@ GtkWidget* create_login_window() {
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
     // Title
-    GtkWidget *title = gtk_label_new(NULL);
-    gtk_label_set_markup(GTK_LABEL(title), 
-        "<span font='18' weight='bold'>National ID Management System</span>");
+    GtkWidget *title = gtk_label_new("National ID Management System");
+
+    GtkStyleContext *context =
+        gtk_widget_get_style_context(title);
+
+    gtk_style_context_add_class(context, "title");
     gtk_box_pack_start(GTK_BOX(vbox), title, FALSE, FALSE, 10);
 
     GtkWidget *subtitle = gtk_label_new("Secure Government Database");
@@ -1150,6 +1228,8 @@ static void on_qr_verify_clicked(GtkWidget *widget, gpointer data) {
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
     
+    apply_css();
+
     if(!init_db()) {
         fprintf(stderr, "Failed to initialize database!\n");
         return 1;
@@ -1197,4 +1277,5 @@ int main(int argc, char *argv[]) {
     
     sqlite3_close(db);
     EVP_cleanup();
-    return 0
+    return 0;
+}

@@ -326,6 +326,60 @@ void show_message(GtkWidget *parent, const char *title, const char *message, Gtk
     gtk_widget_destroy(dialog);
 }
 
+void encrypt_text(const char *plain, char *encrypted_hex) {
+    unsigned char key[32];
+    unsigned char iv[16] = "1234567890123456";
+    unsigned char encrypted[512];
+    int len, encrypted_len;
+
+    SHA256((unsigned char*)ENC_KEY, strlen(ENC_KEY), key);
+
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+
+    EVP_EncryptUpdate(ctx, encrypted, &len, (unsigned char*)plain, strlen(plain));
+    encrypted_len = len;
+
+    EVP_EncryptFinal_ex(ctx, encrypted + len, &len);
+    encrypted_len += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    for(int i = 0; i < encrypted_len; i++) {
+        sprintf(encrypted_hex + (i * 2), "%02x", encrypted[i]);
+    }
+    encrypted_hex[encrypted_len * 2] = '\0';
+}
+
+void decrypt_text(const char *encrypted_hex, char *plain) {
+    unsigned char key[32];
+    unsigned char iv[16] = "1234567890123456";
+    unsigned char encrypted[512];
+    unsigned char decrypted[512];
+    int encrypted_len = strlen(encrypted_hex) / 2;
+    int len, decrypted_len;
+
+    SHA256((unsigned char*)ENC_KEY, strlen(ENC_KEY), key);
+
+    for(int i = 0; i < encrypted_len; i++) {
+        sscanf(encrypted_hex + 2*i, "%2hhx", &encrypted[i]);
+    }
+
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+
+    EVP_DecryptUpdate(ctx, decrypted, &len, encrypted, encrypted_len);
+    decrypted_len = len;
+
+    EVP_DecryptFinal_ex(ctx, decrypted + len, &len);
+    decrypted_len += len;
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    decrypted[decrypted_len] = '\0';
+    strcpy(plain, (char*)decrypted);
+}
+
 // LOGIN WINDOW 
 static void on_login_clicked(GtkWidget *widget, gpointer data) {
     GtkWidget **entries = (GtkWidget **)data;

@@ -651,7 +651,7 @@ static void on_register_save(GtkWidget *widget, gpointer data) {
     } else {
         show_message(GTK_WIDGET(gtk_widget_get_toplevel(widget)), "Error", "Failed to register citizen!", GTK_MESSAGE_ERROR);
     }
-}
+
 
     static void on_register_clicked(GtkWidget *widget, gpointer data) {
         GtkWidget *dialog = gtk_dialog_new_with_buttons("Register New Citizen",

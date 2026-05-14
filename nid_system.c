@@ -9,6 +9,8 @@
 #include <gtk/gtk.h>
 #include <qrencode.h>
 
+#define ENC_KEY "MdNaimNIDSystem2026SecureKey!!"
+
 #define MAX_NAME 100
 #define MAX_ADDRESS 200
 #define SALT_LEN 32

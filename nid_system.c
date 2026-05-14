@@ -797,27 +797,40 @@ static void on_search_execute(GtkWidget *widget, gpointer data) {
         
         if(sqlite3_step(stmt) == SQLITE_ROW) {
             Citizen c;
+
             strncpy(c.nid, (const char*)sqlite3_column_text(stmt, 0), 20);
-            strncpy(c.name, (const char*)sqlite3_column_text(stmt, 1), MAX_NAME);
-            strncpy(c.dob, (const char*)sqlite3_column_text(stmt, 2), 11);
-            strncpy(c.gender, (const char*)sqlite3_column_text(stmt, 3), 10);
-            strncpy(c.address, (const char*)sqlite3_column_text(stmt, 4), MAX_ADDRESS);
-            strncpy(c.father_name, (const char*)sqlite3_column_text(stmt, 5), MAX_NAME);
-            strncpy(c.mother_name, (const char*)sqlite3_column_text(stmt, 6), MAX_NAME);
-            strncpy(c.blood_group, (const char*)sqlite3_column_text(stmt, 7), 4);
+
+            decrypt_text((const char*)sqlite3_column_text(stmt, 1), c.name);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 2), c.dob);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 3), c.gender);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 4), c.address);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 5), c.father_name);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 6), c.mother_name);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 7), c.blood_group);
+
             c.is_active = sqlite3_column_int(stmt, 8);
             
             char msg[512];
+
             snprintf(msg, sizeof(msg), 
                 "NID: %s\nName: %s\nDOB: %s\nGender: %s\nAddress: %s\nFather: %s\nMother: %s\nBlood: %s\nStatus: %s",
-                c.nid, c.name, c.dob, c.gender, c.address, c.father_name, c.mother_name, c.blood_group,
+                c.nid, c.name, c.dob, c.gender, c.address,
+                c.father_name, c.mother_name, c.blood_group,
                 c.is_active ? "Active" : "Inactive");
             
-            show_message(GTK_WIDGET(gtk_widget_get_toplevel(widget)), "Citizen Found", msg, GTK_MESSAGE_INFO);
+            show_message(GTK_WIDGET(gtk_widget_get_toplevel(widget)),
+                         "Citizen Found",
+                         msg,
+                         GTK_MESSAGE_INFO);
+
             log_activity(nid, "SEARCHED");
         } else {
-            show_message(GTK_WIDGET(gtk_widget_get_toplevel(widget)), "Not Found", "Citizen with this NID not found!", GTK_MESSAGE_WARNING);
+            show_message(GTK_WIDGET(gtk_widget_get_toplevel(widget)),
+                         "Not Found",
+                         "Citizen with this NID not found!",
+                         GTK_MESSAGE_WARNING);
         }
+
         sqlite3_finalize(stmt);
     }
 }

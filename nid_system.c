@@ -652,6 +652,7 @@ static void on_register_save(GtkWidget *widget, gpointer data) {
         show_message(GTK_WIDGET(gtk_widget_get_toplevel(widget)), "Error", "Failed to register citizen!", GTK_MESSAGE_ERROR);
     }
 
+}
 
     static void on_register_clicked(GtkWidget *widget, gpointer data) {
         GtkWidget *dialog = gtk_dialog_new_with_buttons("Register New Citizen",
@@ -786,7 +787,7 @@ static void on_register_save(GtkWidget *widget, gpointer data) {
         gtk_widget_destroy(dialog);
     }
     
-}
+
 
 //   SEARCH CITIZEN  
 static void on_search_execute(GtkWidget *widget, gpointer data) {
@@ -891,41 +892,60 @@ static void on_update_fetch(GtkWidget *widget, gpointer data) {
         sqlite3_bind_text(stmt, 1, nid, -1, SQLITE_STATIC);
         
         if(sqlite3_step(stmt) == SQLITE_ROW) {
-            gtk_entry_set_text(GTK_ENTRY(uw->entries[1]), (const char*)sqlite3_column_text(stmt, 1));
-            gtk_entry_set_text(GTK_ENTRY(uw->entries[2]), (const char*)sqlite3_column_text(stmt, 2));
-            
-            const char *gender = (const char*)sqlite3_column_text(stmt, 3);
-            if(strcmp(gender, "Male") == 0) gtk_combo_box_set_active(GTK_COMBO_BOX(uw->entries[3]), 0);
-            else gtk_combo_box_set_active(GTK_COMBO_BOX(uw->entries[3]), 1);
-            
-            gtk_entry_set_text(GTK_ENTRY(uw->entries[4]), (const char*)sqlite3_column_text(stmt, 4));
-            gtk_entry_set_text(GTK_ENTRY(uw->entries[5]), (const char*)sqlite3_column_text(stmt, 5));
-            gtk_entry_set_text(GTK_ENTRY(uw->entries[6]), (const char*)sqlite3_column_text(stmt, 6));
-            
-            const char *bg = (const char*)sqlite3_column_text(stmt, 7);
+
+            char dec_name[256], dec_dob[256], dec_gender[256];
+            char dec_address[256], dec_father[256];
+            char dec_mother[256], dec_blood[256];
+
+            decrypt_text((const char*)sqlite3_column_text(stmt, 1), dec_name);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 2), dec_dob);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 3), dec_gender);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 4), dec_address);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 5), dec_father);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 6), dec_mother);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 7), dec_blood);
+
+            gtk_entry_set_text(GTK_ENTRY(uw->entries[1]), dec_name);
+            gtk_entry_set_text(GTK_ENTRY(uw->entries[2]), dec_dob);
+
+            if(strcmp(dec_gender, "Male") == 0) {
+                gtk_combo_box_set_active(GTK_COMBO_BOX(uw->entries[3]), 0);
+            } else {
+                gtk_combo_box_set_active(GTK_COMBO_BOX(uw->entries[3]), 1);
+            }
+
+            gtk_entry_set_text(GTK_ENTRY(uw->entries[4]), dec_address);
+            gtk_entry_set_text(GTK_ENTRY(uw->entries[5]), dec_father);
+            gtk_entry_set_text(GTK_ENTRY(uw->entries[6]), dec_mother);
+
             const char *bgs[] = {"A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"};
+
             for(int i = 0; i < 8; i++) {
-                if(strcmp(bg, bgs[i]) == 0) {
+                if(strcmp(dec_blood, bgs[i]) == 0) {
                     gtk_combo_box_set_active(GTK_COMBO_BOX(uw->entries[7]), i);
                     break;
                 }
             }
             
-            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(uw->entries[8]), sqlite3_column_int(stmt, 8));
+            gtk_toggle_button_set_active(
+                GTK_TOGGLE_BUTTON(uw->entries[8]),
+                sqlite3_column_int(stmt, 8)
+            );
             
             strncpy(uw->original_nid, nid, 19);
+            uw->original_nid[19] = '\0';
+
             uw->found = 1;
             
-            // Enable save button
             gtk_widget_set_sensitive(uw->entries[9], TRUE);
         } else {
             show_message(uw->dialog, "Not Found", "Citizen not found!", GTK_MESSAGE_WARNING);
             uw->found = 0;
         }
+
         sqlite3_finalize(stmt);
     }
 }
-
 static void on_update_save(GtkWidget *widget, gpointer data) {
     UpdateWidgets *uw = (UpdateWidgets *)data;
     
@@ -1229,10 +1249,12 @@ static void on_qr_generate_clicked(GtkWidget *widget, gpointer data) {
 
     if(sqlite3_step(stmt) == SQLITE_ROW) {
         const char *db_nid = (const char*)sqlite3_column_text(stmt, 0);
-        const char *name = (const char*)sqlite3_column_text(stmt, 1);
-        const char *dob = (const char*)sqlite3_column_text(stmt, 2);
-        const char *gender = (const char*)sqlite3_column_text(stmt, 3);
-        const char *blood = (const char*)sqlite3_column_text(stmt, 4);
+        char name[256], dob[256], gender[256], blood[256];
+
+        decrypt_text((const char*)sqlite3_column_text(stmt, 1), name);
+        decrypt_text((const char*)sqlite3_column_text(stmt, 2), dob);
+        decrypt_text((const char*)sqlite3_column_text(stmt, 3), gender);
+        decrypt_text((const char*)sqlite3_column_text(stmt, 4), blood);
         int active = sqlite3_column_int(stmt, 5);
 
         char qr_text[512];

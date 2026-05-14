@@ -642,146 +642,139 @@ static void on_register_save(GtkWidget *widget, gpointer data) {
     }
 }
 
-static void on_register_clicked(GtkWidget *widget, gpointer data) {
-    GtkWidget *dialog = gtk_dialog_new_with_buttons("Register New Citizen",
-                                                    GTK_WINDOW(data),
-                                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                                    NULL);
-    gtk_window_set_default_size(GTK_WINDOW(dialog), 450, 500);
-    
-    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    gtk_container_set_border_width(GTK_CONTAINER(content), 15);
-    
-    GtkWidget *grid = gtk_grid_new();
-    gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
-    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
-    gtk_box_pack_start(GTK_BOX(content), grid, TRUE, TRUE, 0);
-    
-    const char *labels[] = {"Full Name:", "DOB (DD-MM-YYYY):", "Gender:", "Address:", 
-                           "Father Name:", "Mother Name:", "Blood Group:"};
-    GtkWidget *entries[7];
-    
-    for(int i = 0; i < 7; i++) {
-        GtkWidget *label = gtk_label_new(labels[i]);
-        gtk_widget_set_halign(label, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(grid), label, 0, i, 1, 1);
+    static void on_register_clicked(GtkWidget *widget, gpointer data) {
+        GtkWidget *dialog = gtk_dialog_new_with_buttons("Register New Citizen",
+                                                        GTK_WINDOW(data),
+                                                        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                        NULL);
+        gtk_window_set_default_size(GTK_WINDOW(dialog), 450, 500);
         
-        if(i == 2) { // Gender combo
-            entries[i] = gtk_combo_box_text_new();
-            gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entries[i]), "Male");
-            gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entries[i]), "Female");
-            gtk_combo_box_set_active(GTK_COMBO_BOX(entries[i]), 0);
-        } else if(i == 6) { // Blood group combo
-            entries[i] = gtk_combo_box_text_new();
-            const char *bgs[] = {"A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", NULL};
-            for(int j = 0; bgs[j]; j++) {
-                gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entries[i]), bgs[j]);
-            }
-            gtk_combo_box_set_active(GTK_COMBO_BOX(entries[i]), 0);
-        } else {
-            entries[i] = gtk_entry_new();
-        }
-        gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
-        gtk_widget_set_hexpand(entries[i], TRUE);
-    }
-    
-    GtkWidget *save_btn = gtk_button_new_with_label("Save Citizen");
-    gtk_widget_set_margin_top(save_btn, 15);
-    gtk_grid_attach(GTK_GRID(grid), save_btn, 0, 7, 2, 1);
-    
-    g_signal_connect(save_btn, "clicked", G_CALLBACK(on_register_save), entries);
-    
-    gtk_widget_show_all(dialog);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
-}
-
-//   VIEW CITIZENS  
-static void on_view_clicked(GtkWidget *widget, gpointer data) {
-    GtkWidget *dialog = gtk_dialog_new_with_buttons("All Registered Citizens",
-                                                    GTK_WINDOW(data),
-                                                    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                                    "Close", GTK_RESPONSE_CLOSE,
-                                                    NULL);
-    gtk_window_set_default_size(GTK_WINDOW(dialog), 900, 500);
-    
-    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    
-    GtkListStore *store = gtk_list_store_new(10, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
-                                              G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
-                                              G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
-    
-    GtkWidget *treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
-    g_object_unref(store);
-    
-    const char *titles[] = {"NID", "Name", "DOB", "Gender", "Address", "Father", "Mother", "Blood", "Status", "Created"};
-
-    for(int i = 0; i < 10; i++) {
-        GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
-        GtkTreeViewColumn *column = gtk_tree_view_column_new_with_attributes(titles[i], renderer, "text", i, NULL);
-        gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), column);
-    }
-    
-    char *sql = "SELECT * FROM citizens;";
-    sqlite3_stmt *stmt;
-
-    if(sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK) {
-        while(sqlite3_step(stmt) == SQLITE_ROW) {
-            GtkTreeIter iter;
-            gtk_list_store_append(store, &iter);
-
-            const char *status = sqlite3_column_int(stmt, 8) ? "Active" : "Inactive";
-
-            time_t created = (time_t)sqlite3_column_int64(stmt, 9);
-            char created_str[26];
-            strncpy(created_str, ctime(&created), 25);
-            created_str[24] = '\0';
-
-            char dec_name[256], dec_dob[256], dec_gender[256];
-            char dec_address[256], dec_father[256];
-            char dec_mother[256], dec_blood[256];
-
-            decrypt_text((const char*)sqlite3_column_text(stmt, 1), dec_name);
-            decrypt_text((const char*)sqlite3_column_text(stmt, 2), dec_dob);
-            decrypt_text((const char*)sqlite3_column_text(stmt, 3), dec_gender);
-            decrypt_text((const char*)sqlite3_column_text(stmt, 4), dec_address);
-            decrypt_text((const char*)sqlite3_column_text(stmt, 5), dec_father);
-            decrypt_text((const char*)sqlite3_column_text(stmt, 6), dec_mother);
-            decrypt_text((const char*)sqlite3_column_text(stmt, 7), dec_blood);
+        GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+        gtk_container_set_border_width(GTK_CONTAINER(content), 15);
+        
+        GtkWidget *grid = gtk_grid_new();
+        gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+        gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+        gtk_box_pack_start(GTK_BOX(content), grid, TRUE, TRUE, 0);
+        
+        const char *labels[] = {"Full Name:", "DOB (DD-MM-YYYY):", "Gender:", "Address:", 
+                            "Father Name:", "Mother Name:", "Blood Group:"};
+        GtkWidget *entries[7];
+        
+        for(int i = 0; i < 7; i++) {
+            GtkWidget *label = gtk_label_new(labels[i]);
+            gtk_widget_set_halign(label, GTK_ALIGN_START);
+            gtk_grid_attach(GTK_GRID(grid), label, 0, i, 1, 1);
             
-            gtk_list_store_set(store, &iter,
-                0, sqlite3_column_text(stmt, 0),
-                1, dec_name,
-                2, dec_dob,
-                3, dec_gender,
-                4, dec_address,
-                5, dec_father,
-                6, dec_mother,
-                7, dec_blood,
-                8, status,
-                9, created_str,
-                -1);
+            if(i == 2) { // Gender combo
+                entries[i] = gtk_combo_box_text_new();
+                gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entries[i]), "Male");
+                gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entries[i]), "Female");
+                gtk_combo_box_set_active(GTK_COMBO_BOX(entries[i]), 0);
+            } else if(i == 6) { // Blood group combo
+                entries[i] = gtk_combo_box_text_new();
+                const char *bgs[] = {"A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", NULL};
+                for(int j = 0; bgs[j]; j++) {
+                    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entries[i]), bgs[j]);
+                }
+                gtk_combo_box_set_active(GTK_COMBO_BOX(entries[i]), 0);
+            } else {
+                entries[i] = gtk_entry_new();
+            }
+            gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
+            gtk_widget_set_hexpand(entries[i], TRUE);
         }
+        
+        GtkWidget *save_btn = gtk_button_new_with_label("Save Citizen");
+        gtk_widget_set_margin_top(save_btn, 15);
+        gtk_grid_attach(GTK_GRID(grid), save_btn, 0, 7, 2, 1);
+        
+        g_signal_connect(save_btn, "clicked", G_CALLBACK(on_register_save), entries);
+        
+        gtk_widget_show_all(dialog);
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+    }
 
-        sqlite3_finalize(stmt);
+    //   VIEW CITIZENS  
+    static void on_view_clicked(GtkWidget *widget, gpointer data) {
+        GtkWidget *dialog = gtk_dialog_new_with_buttons("All Registered Citizens",
+                                                        GTK_WINDOW(data),
+                                                        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                        "Close", GTK_RESPONSE_CLOSE,
+                                                        NULL);
+        gtk_window_set_default_size(GTK_WINDOW(dialog), 900, 500);
+        
+        GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+        
+        GtkListStore *store = gtk_list_store_new(10, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
+                                                G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
+                                                G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+        
+        GtkWidget *treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
+        g_object_unref(store);
+        
+        const char *titles[] = {"NID", "Name", "DOB", "Gender", "Address", "Father", "Mother", "Blood", "Status", "Created"};
+
+        for(int i = 0; i < 10; i++) {
+            GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
+            GtkTreeViewColumn *column = gtk_tree_view_column_new_with_attributes(titles[i], renderer, "text", i, NULL);
+            gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), column);
+        }
+        
+        char *sql = "SELECT * FROM citizens;";
+        sqlite3_stmt *stmt;
+
+        if(sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK) {
+            while(sqlite3_step(stmt) == SQLITE_ROW) {
+                GtkTreeIter iter;
+                gtk_list_store_append(store, &iter);
+
+                const char *status = sqlite3_column_int(stmt, 8) ? "Active" : "Inactive";
+
+                time_t created = (time_t)sqlite3_column_int64(stmt, 9);
+                char created_str[26];
+                strncpy(created_str, ctime(&created), 25);
+                created_str[24] = '\0';
+
+                char dec_name[256], dec_dob[256], dec_gender[256];
+                char dec_address[256], dec_father[256];
+                char dec_mother[256], dec_blood[256];
+
+                decrypt_text((const char*)sqlite3_column_text(stmt, 1), dec_name);
+                decrypt_text((const char*)sqlite3_column_text(stmt, 2), dec_dob);
+                decrypt_text((const char*)sqlite3_column_text(stmt, 3), dec_gender);
+                decrypt_text((const char*)sqlite3_column_text(stmt, 4), dec_address);
+                decrypt_text((const char*)sqlite3_column_text(stmt, 5), dec_father);
+                decrypt_text((const char*)sqlite3_column_text(stmt, 6), dec_mother);
+                decrypt_text((const char*)sqlite3_column_text(stmt, 7), dec_blood);
+                
+                gtk_list_store_set(store, &iter,
+                    0, sqlite3_column_text(stmt, 0),
+                    1, dec_name,
+                    2, dec_dob,
+                    3, dec_gender,
+                    4, dec_address,
+                    5, dec_father,
+                    6, dec_mother,
+                    7, dec_blood,
+                    8, status,
+                    9, created_str,
+                    -1);
+            }
+
+            sqlite3_finalize(stmt);
+        }
+        
+        GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+        gtk_container_add(GTK_CONTAINER(scroll), treeview);
+        gtk_box_pack_start(GTK_BOX(content), scroll, TRUE, TRUE, 0);
+        
+        gtk_widget_show_all(dialog);
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
     }
     
-    GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
-    gtk_container_add(GTK_CONTAINER(scroll), treeview);
-    gtk_box_pack_start(GTK_BOX(content), scroll, TRUE, TRUE, 0);
-    
-    gtk_widget_show_all(dialog);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
-}
-    
-    GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
-    gtk_container_add(GTK_CONTAINER(scroll), treeview);
-    gtk_box_pack_start(GTK_BOX(content), scroll, TRUE, TRUE, 0);
-    
-    gtk_widget_show_all(dialog);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
 }
 
 //   SEARCH CITIZEN  

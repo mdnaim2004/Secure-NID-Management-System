@@ -1115,13 +1115,6 @@ static void on_audit_clicked(GtkWidget *widget, gpointer data) {
         sqlite3_finalize(stmt);
     }
     
-    GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
-    gtk_container_add(GTK_CONTAINER(scroll), treeview);
-    gtk_box_pack_start(GTK_BOX(content), scroll, TRUE, TRUE, 0);
-    
-    gtk_widget_show_all(dialog);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
 }
 //   NID APPLICATION GUIDE
 static void on_nid_guide_clicked(GtkWidget *widget, gpointer data) {

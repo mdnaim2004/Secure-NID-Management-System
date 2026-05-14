@@ -191,13 +191,24 @@ int update_citizen_db(Citizen *updated, const char *original_nid) {
     sqlite3_stmt *update_stmt;
 
     if (sqlite3_prepare_v2(db, update_sql, -1, &update_stmt, 0) == SQLITE_OK) {
-        sqlite3_bind_text(update_stmt, 1, updated->name, -1, SQLITE_STATIC);
-        sqlite3_bind_text(update_stmt, 2, updated->dob, -1, SQLITE_STATIC);
-        sqlite3_bind_text(update_stmt, 3, updated->gender, -1, SQLITE_STATIC);
-        sqlite3_bind_text(update_stmt, 4, updated->address, -1, SQLITE_STATIC);
-        sqlite3_bind_text(update_stmt, 5, updated->father_name, -1, SQLITE_STATIC);
-        sqlite3_bind_text(update_stmt, 6, updated->mother_name, -1, SQLITE_STATIC);
-        sqlite3_bind_text(update_stmt, 7, updated->blood_group, -1, SQLITE_STATIC);
+        char enc_name[512], enc_dob[512], enc_gender[512];
+        char enc_address[512], enc_father[512], enc_mother[512], enc_blood[512];
+
+        encrypt_text(updated->name, enc_name);
+        encrypt_text(updated->dob, enc_dob);
+        encrypt_text(updated->gender, enc_gender);
+        encrypt_text(updated->address, enc_address);
+        encrypt_text(updated->father_name, enc_father);
+        encrypt_text(updated->mother_name, enc_mother);
+        encrypt_text(updated->blood_group, enc_blood);
+
+        sqlite3_bind_text(update_stmt, 1, enc_name, -1, SQLITE_STATIC);
+        sqlite3_bind_text(update_stmt, 2, enc_dob, -1, SQLITE_STATIC);
+        sqlite3_bind_text(update_stmt, 3, enc_gender, -1, SQLITE_STATIC);
+        sqlite3_bind_text(update_stmt, 4, enc_address, -1, SQLITE_STATIC);
+        sqlite3_bind_text(update_stmt, 5, enc_father, -1, SQLITE_STATIC);
+        sqlite3_bind_text(update_stmt, 6, enc_mother, -1, SQLITE_STATIC);
+        sqlite3_bind_text(update_stmt, 7, enc_blood, -1, SQLITE_STATIC);
         sqlite3_bind_int(update_stmt, 8, updated->is_active);
         sqlite3_bind_int64(update_stmt, 9, (sqlite3_int64)updated->last_modified);
         sqlite3_bind_text(update_stmt, 10, original_nid, -1, SQLITE_STATIC);

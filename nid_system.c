@@ -707,7 +707,6 @@ static void on_view_clicked(GtkWidget *widget, gpointer data) {
     
     GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
     
-    // TreeView setup
     GtkListStore *store = gtk_list_store_new(10, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
                                               G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
                                               G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
@@ -716,40 +715,65 @@ static void on_view_clicked(GtkWidget *widget, gpointer data) {
     g_object_unref(store);
     
     const char *titles[] = {"NID", "Name", "DOB", "Gender", "Address", "Father", "Mother", "Blood", "Status", "Created"};
+
     for(int i = 0; i < 10; i++) {
         GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
         GtkTreeViewColumn *column = gtk_tree_view_column_new_with_attributes(titles[i], renderer, "text", i, NULL);
         gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), column);
     }
     
-    // Fetch data
     char *sql = "SELECT * FROM citizens;";
     sqlite3_stmt *stmt;
+
     if(sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK) {
         while(sqlite3_step(stmt) == SQLITE_ROW) {
             GtkTreeIter iter;
             gtk_list_store_append(store, &iter);
+
             const char *status = sqlite3_column_int(stmt, 8) ? "Active" : "Inactive";
+
             time_t created = (time_t)sqlite3_column_int64(stmt, 9);
             char created_str[26];
             strncpy(created_str, ctime(&created), 25);
             created_str[24] = '\0';
+
+            char dec_name[256], dec_dob[256], dec_gender[256];
+            char dec_address[256], dec_father[256];
+            char dec_mother[256], dec_blood[256];
+
+            decrypt_text((const char*)sqlite3_column_text(stmt, 1), dec_name);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 2), dec_dob);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 3), dec_gender);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 4), dec_address);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 5), dec_father);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 6), dec_mother);
+            decrypt_text((const char*)sqlite3_column_text(stmt, 7), dec_blood);
             
             gtk_list_store_set(store, &iter,
                 0, sqlite3_column_text(stmt, 0),
-                1, sqlite3_column_text(stmt, 1),
-                2, sqlite3_column_text(stmt, 2),
-                3, sqlite3_column_text(stmt, 3),
-                4, sqlite3_column_text(stmt, 4),
-                5, sqlite3_column_text(stmt, 5),
-                6, sqlite3_column_text(stmt, 6),
-                7, sqlite3_column_text(stmt, 7),
+                1, dec_name,
+                2, dec_dob,
+                3, dec_gender,
+                4, dec_address,
+                5, dec_father,
+                6, dec_mother,
+                7, dec_blood,
                 8, status,
                 9, created_str,
                 -1);
         }
+
         sqlite3_finalize(stmt);
     }
+    
+    GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+    gtk_container_add(GTK_CONTAINER(scroll), treeview);
+    gtk_box_pack_start(GTK_BOX(content), scroll, TRUE, TRUE, 0);
+    
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+}
     
     GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
     gtk_container_add(GTK_CONTAINER(scroll), treeview);

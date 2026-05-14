@@ -130,29 +130,52 @@ void derive_key(const char *pass, const unsigned char *salt, unsigned char *key)
 
 //   CITIZEN OPERATIONS  
 int save_citizen(Citizen *citizen) {
+
     char *sql = "INSERT INTO citizens VALUES (?,?,?,?,?,?,?,?,?,?,?);";
+
     sqlite3_stmt *stmt;
+
     if(sqlite3_prepare_v2(db, sql, -1, &stmt, 0) != SQLITE_OK) {
         return 0;
     }
-    
+
+    // Encrypted fields
+    char enc_name[512], enc_dob[512], enc_gender[512];
+    char enc_address[512], enc_father[512];
+    char enc_mother[512], enc_blood[512];
+
+    encrypt_text(citizen->name, enc_name);
+    encrypt_text(citizen->dob, enc_dob);
+    encrypt_text(citizen->gender, enc_gender);
+    encrypt_text(citizen->address, enc_address);
+    encrypt_text(citizen->father_name, enc_father);
+    encrypt_text(citizen->mother_name, enc_mother);
+    encrypt_text(citizen->blood_group, enc_blood);
+
     sqlite3_bind_text(stmt, 1, citizen->nid, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, citizen->name, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, citizen->dob, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, citizen->gender, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 5, citizen->address, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 6, citizen->father_name, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 7, citizen->mother_name, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 8, citizen->blood_group, -1, SQLITE_STATIC);
+
+    sqlite3_bind_text(stmt, 2, enc_name, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, enc_dob, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, enc_gender, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, enc_address, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 6, enc_father, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 7, enc_mother, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 8, enc_blood, -1, SQLITE_STATIC);
+
     sqlite3_bind_int(stmt, 9, citizen->is_active);
+
     sqlite3_bind_int64(stmt, 10, (sqlite3_int64)citizen->created_at);
+
     sqlite3_bind_int64(stmt, 11, (sqlite3_int64)citizen->last_modified);
+
     int rc = sqlite3_step(stmt);
+
     sqlite3_finalize(stmt);
-    
+
     if(rc != SQLITE_DONE) {
         return 0;
     }
+
     return 1;
 }
 

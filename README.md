@@ -263,16 +263,28 @@ sudo apt install gcc gtk+-3.0 libgtk-3-dev sqlite3 libsqlite3-dev libssl-dev lib
 ## Compile Command
 
 ```bash
-gcc national_id_gtk.c -o nid_system `pkg-config --cflags --libs gtk+-3.0` -lsqlite3 -lssl -lcrypto -lqrencode
+gcc nid_system.c -o nid_system $(pkg-config --cflags --libs gtk+-3.0) -lsqlite3 -lssl -lcrypto -lqrencode
 ```
 
 ---
 
 ## Run the Project
 
+### Option 1: Using Launcher Script (Recommended)
+
 ```bash
-./nid_system
+./run.sh
 ```
+
+The launcher script automatically handles environment setup.
+
+### Option 2: Manual Execution
+
+```bash
+env -u GTK_PATH -u GTK_EXE_PREFIX -u GTK_MODULES -u GTK_IM_MODULE_FILE ./nid_system
+```
+
+**Note:** The first method is simpler and recommended for regular use.
 
 ---
 
